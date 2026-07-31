@@ -1,0 +1,8 @@
+# Prompts
+
+`triage-system-prompt.md` is the system prompt used to triage each inbound message individually. Notes on the approach:
+
+- **Controlled taxonomy.** The seven categories and three priority levels in the prompt mirror `lib/triage-config.ts` exactly — that file is the single source of truth for the app's code (types and validation both derive from it), and this prompt is kept in sync with it by hand. If the taxonomy changes, update both.
+- **Limiting unsupported inference.** The prompt's "Hard rules" section explicitly forbids inventing missing context, forbids assuming `existing_client` status without direct evidence, and requires treating sentinel values like `(individual)`/`(unknown)` as missing rather than as real signal. Messages with too little evidence to classify (near-empty, garbled, or otherwise low-signal) are routed to `unclear_or_malformed` instead of being guessed at.
+- **Validating the output.** The model is expected to return exactly four fields (`summary`, `category`, `priority`, `suggested_action`). Once the API call is wired up, the raw response will be parsed and checked against `TriageResultSchema` (`lib/triage-schema.ts`), which enforces the same category/priority enums as the prompt plus non-empty, length-bounded strings for `summary` and `suggested_action`.
+- **Retry behavior (planned).** When the API integration is added, a response that fails schema validation will be retried once (e.g. a single follow-up call) before the item is surfaced as a failed/unclear result. This is not implemented yet — Stage 2 only defines the domain model, schema, and prompt.
